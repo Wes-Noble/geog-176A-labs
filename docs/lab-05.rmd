@@ -1,0 +1,241 @@
+---
+title: "Geography 176A"
+author: "[Wesley Noble](https://wes-noble.github.io/)"
+date: "09-07-2020"
+subtitle: "Lab 05: Rasters & Remote Sensing"
+output:
+  html_document:
+  theme: journal
+---
+
+# Libraries
+
+```{r, message=FALSE, warning=FALSE}
+
+library(raster)
+library(tidyverse)
+library(getlandsat)
+library(sf)
+library(mapview)
+library(osmdata)
+library(stats)
+library(knitr)
+
+```
+
+# Question 1
+
+```{r, message=FALSE, warning=FALSE}
+
+Palo = read_csv("/users/noblex/github/Geog-176A-Lab1/data/uscities.csv") %>%
+  st_as_sf(coords = c("lng", "lat"), crs = 4326) %>%
+  filter(city == "Palo") %>%
+  st_transform(5070)
+
+AOI = Palo %>%
+  st_buffer(5000) %>%
+  st_bbox() %>%
+  st_as_sfc() %>%
+  st_as_sf()
+
+```
+
+# Question 2
+
+```{r, message=FALSE, warning=FALSE}
+
+#Step 1: Filter scenes to match bounding box and date
+
+#Done in Rscript
+
+AOI2 = AOI %>%
+  st_transform(4326)
+
+bb = AOI2 %>% st_bbox()
+
+#Step 2: cache data onto computer
+
+test = read_csv("/users/noblex/github/geog-176A-labs/data/palo-flood-scene.csv")
+
+files = lsat_scene_files(test$download_url) %>%
+  filter(grepl(paste0('B', 1:6, ".TIF$", collapse = "|"), file)) %>%
+  arrange(file) %>%
+  pull(file)
+
+#Step 3: downloading data
+
+st = sapply(files, lsat_image)
+
+s = stack(st) %>%
+  setNames(c(paste0("band", 1:6)))
+
+#Dimensions = 7811, 7681, 59996291, 6
+#CRS = +proj=utm +zone=15 +datum=WGS84 +units=m +no_defs
+#Resolution = 30, 30
+
+cropper = AOI2 %>% st_transform(crs(s))
+
+r = crop(s, cropper)
+
+#Dimensions = 340, 346, 117640, 6
+#CRS = +proj=utm +zone=15 +datum=WGS84 +units=m +no_defs
+#Resolution = 30, 30
+
+```
+
+# Question 3
+
+```{r, message=FALSE, warning=FALSE}
+
+#Step 1: Messing with rgb
+
+r = setNames(r, c("coastal", "blue", "green", "red", "NIR", "SWIRL1"))
+
+par(mfrow = c(2,2))
+plotRGB(r, r = "red", g = "green", b = "blue")
+plotRGB(r, r = "NIR", g = "red", b = "green")
+plotRGB(r, r = "NIR", g = "SWIRL1", b = "red")
+plotRGB(r, r = "SWIRL1", g = "NIR", b = "blue")
+
+#Step 2: Stretching
+
+par(mfrow = c(2,2))
+plotRGB(r, r = "red", g = "green", b = "blue", stretch="lin")
+plotRGB(r, r = "NIR", g = "red", b = "green", stretch="lin")
+plotRGB(r, r = "NIR", g = "SWIRL1", b = "red", stretch="lin")
+plotRGB(r, r = "SWIRL1", g = "NIR", b = "blue", stretch="lin")
+
+#Stretching the image increases the contrast
+#I am going to use "lin" because the contrast of the images are not as stark as with the use of "hist"
+
+```
+
+# Question 4
+
+```{r, message=FALSE, warning=FALSE}
+
+#Step 1: Raster Algebra
+
+vegetation_index = (r$NIR - r$red) / (r$NIR + r$red)
+water_index = (r$green - r$NIR) / (r$green + r$NIR)
+modified_water_index = (r$green - r$SWIRL1) / (r$green + r$SWIRL1)
+water_ratio_index = (r$green + r$red) / (r$NIR + r$SWIRL1)
+simple_water_index = (1) / (sqrt(r$blue - r$SWIRL1))
+
+bands = stack(vegetation_index, water_index, modified_water_index, water_ratio_index, simple_water_index) %>%
+    setNames(c("ndvi", "ndwi", "mndwi", "wri", "swi"))
+
+palette = colorRampPalette(c("blue", "white", "red"))
+
+plot(bands, col = palette(256))
+
+#I notice with the simple water index, all that is represented is the water features in the bounding box
+#The modified water index and the water ration index look very similar
+#The vegetation index seems to represent both vegetation areas and water resources
+
+#Step 2: Raster thresholding
+
+threshold1 = function(x){ifelse(x <= 0, 1, 0)}
+
+threshold2 = function(x){ifelse(x >= 0, 1, 0)}
+
+threshold3 = function(x){ifelse(x >= 1, 1, 0)}
+
+threshold4 = function(x){ifelse(x <= 5, 1, 0)}
+
+ndvi_flood = calc(vegetation_index, threshold1)
+
+ndwi_flood = calc(water_index, threshold2)
+
+mndwi_flood = calc(modified_water_index, threshold2)
+
+mwri_flood = calc(water_ratio_index, threshold3)
+
+swi_flood = calc(simple_water_index, threshold4)
+
+floods = stack(ndvi_flood, ndwi_flood, mndwi_flood, mwri_flood, swi_flood) %>%
+  setNames(c("ndvi flood", "ndwi flood", "mndwi flood", "mwri flood", "swi flood"))
+
+floods[is.na(floods)] = 0
+
+plot(floods, col = c("white", "blue"))
+```
+
+# Question 5
+
+```{r, message=FALSE, warning=FALSE}
+
+#Step 1: Set seed
+
+set.seed(6006258)
+
+#Step 2: Creating catagorical rasters
+
+data = getValues(r) %>% 
+  na.omit()
+
+dim(data)
+
+# The dimensions of the extracted values tell us we are dealing with 117,640 observations from 6 different variables
+
+k12 = kmeans(data, 12)
+str(k12)
+
+kmeans_raster1 = bands$mndwi
+
+values(kmeans_raster1) = k12$cluster
+plot(kmeans_raster1, col = palette(4))
+
+
+#Step 3: Identifying flood category
+
+mndwi_flood_values = values(mndwi_flood)
+kcells = values(kmeans_raster1)
+
+table1 = table(mndwi_flood_values, kcells)
+
+which.max(table1[2,])
+
+kmeans_raster1[kmeans_raster1 != which.max(table1[2,])] = 0
+kmeans_raster1[kmeans_raster1 !=0] = 1
+
+floods = addLayer(floods, kmeans_raster1)
+
+plot(floods)
+
+```
+
+# Question 6
+
+```{r, message=FALSE, warning=FALSE}
+
+cellStats(floods, sum)
+
+areas = data.frame("ndvi_flood_area" = 6666 * 900, "ndwi_flood_area" = 7212 * 900, "mndwi_flood_area" = 11939 * 900,
+                   "swi_flood_area" = 15201 * 900, "kluster_mndwi_flood_area" = 9105 * 900)
+
+kable(areas, caption = "Total Area of Flooded Cells (m^2)",
+      col.names = c("NDVI", "NDWI", "MNDWI", "SWI", "Kluster MNDWI"),
+      format.args = list(big.mark = ","))
+
+sum_flood = calc(floods, sum) 
+  
+plot(sum_flood, col = blues9)
+
+copy_sum_flood = sum_flood
+
+values(copy_sum_flood)[values(copy_sum_flood) <= 0] = NA
+
+mapview(copy_sum_flood)
+
+#My best guess why some cells are not a even integer is that cell size adjustments are made while displaying the data with a crs and through a plotting system such as mapview making cells possibly overlap, so the system estimates based on crossing over of cells when mapped.
+
+```
+
+
+
+
+
+
+
+
