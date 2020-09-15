@@ -8,11 +8,9 @@ output:
     theme: journal
 ---
 
-#My Project
+# Libraries
 
-##Question 1
-
-```{r, messages = FALSE, echo = FALSE}
+```{r, message=FALSE, warning=FALSE}
 
 library(tidyverse)
 library(knitr)
@@ -21,13 +19,13 @@ library(readxl)
 
 ```
 
-```{r, messages = FALSE}
+# Question 1
+
+```{r, message=FALSE, warning=FALSE}
 
 covid = read_csv("https://raw.githubusercontent.com/nytimes/covid-19-data/master/us-counties.csv")
 
 PopulationEstimates = read_excel("/users/noblex/github/geog-176A-labs/data/PopulationEstimates.xls", skip = 2)
-
-#Question 1
 
 state.of.interest = "California"
 
@@ -127,8 +125,9 @@ new cases in California, and these are the counties that are deemed safe by the 
 
 ---
 
-```{r}
-#Question 2
+# Question 2
+
+```{r, message=FALSE, warning=FALSE}
 
 data2 = covid %>%
   filter(state %in% c("California", "New York", "Louisiana", "Florida")) %>%

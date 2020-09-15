@@ -8,6 +8,8 @@ output:
   theme: journal
 ---
 
+# Libraries
+
 ```{r, message=FALSE, warning=FALSE}
 
 library(tidyverse)
@@ -19,6 +21,8 @@ library(osmdata)
 library(elevatr)   
 
 ```
+
+# Question 1
 
 ```{r, message=FALSE, warning=FALSE}
 

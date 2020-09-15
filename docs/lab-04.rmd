@@ -28,7 +28,7 @@ library(leafpop)
 
 # Question 1
 
-```{r, message = FALSE, warning = FALSE}
+```{r, message=FALSE, warning=FALSE}
 
 #1.1: Getting CONUS
 

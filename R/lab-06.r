@@ -113,8 +113,13 @@ flood_depth = raster::extract(offset_raster, buildings)
 
 sum(!is.na(flood_depth))
 
-plot(hillshade, col = gray.colors(256, alpha = .5), box = FALSE, axes = FALSE, legend = FALSE)
-plot()
+cols = ifelse(!is.na(extract(offset_raster, buildings)), "red", "black")
+
+plot(hillshade, col = gray.colors(256, alpha = .5), box = FALSE, axes = FALSE, legend = FALSE, main = paste(sum(!is.na(flood_depth)), " impacted structures"))
+plot(offset_raster, col = rev(blues9), add = TRUE, legend = FALSE)
+plot(railway_point, col = "green", cex = 1, pch = 16, add = TRUE)
+plot(buildings, col = cols, pch = 16, cex = .08, add = TRUE)
+
 
 
 

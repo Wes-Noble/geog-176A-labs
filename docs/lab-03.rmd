@@ -8,7 +8,9 @@ output:
   theme: journal
 ---
 
-```{r, messages = FALSE, echo = FALSE}
+# Libraries
+
+```{r, message=FALSE, warning=FALSE}
 
 library(tidyverse)
 library(sf)
@@ -23,7 +25,7 @@ library(knitr)
 
 # Question 1
 
-```{r, messages = FALSE}
+```{r, message=FALSE, warning=FALSE}
 
 #USAboundaries data
 
@@ -54,7 +56,7 @@ us_cities = st_transform(us_cities, '+proj=eqdc +lat_0=40 +lon_0=-96 +lat_1=20 +
 
 # Question 2
 
-```{r, messages = FALSE}
+```{r, message=FALSE, warning=FALSE}
 
 #2.1 - 5 cities furthest from US border
 
@@ -137,7 +139,7 @@ kable(furthest_cities_from_canada, caption = "Furthest Cities from Canadian Bord
 # Question 3
 
 
-```{r, messages = FALSE}
+```{r, message=FALSE, warning=FALSE}
 
 #3.1 - Map of 10 most populated cities in US
 
@@ -226,7 +228,7 @@ ggplot() +
 
 # Question 4
 
-```{r, messages = FALSE}
+```{r, message=FALSE, warning=FALSE}
 
 border_cities_mex = us_cities %>%
   filter(dist_to_mexico < 160)
@@ -255,7 +257,7 @@ The article referenced in the lab directions estimates the total population in t
 ---
 
 
-```{r, messages = FALSE}
+```{r, message=FALSE, warning=FALSE}
 map_last_border_cities = us_cities %>%
   filter(dist_to_border < 160)
 
